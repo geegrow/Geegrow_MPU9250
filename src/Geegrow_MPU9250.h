@@ -580,7 +580,6 @@ class Geegrow_MPU9250 {
     int16_t accelRawData[3] = {0, 0, 0};
     int16_t gyroRawData[3] = {0, 0, 0};
 
-    float pitch, yaw, roll;
     // float temperature;   // Stores the real internal chip temperature in Celsius
     // int16_t tempCount;   // Temperature raw count output
     // uint32_t delt_t = 0; // Used to control display output rate

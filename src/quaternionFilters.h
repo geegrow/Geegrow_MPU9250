@@ -3,6 +3,8 @@
 
 #include <Arduino.h>
 
+#define PI  3.14159265
+
 void MadgwickQuaternionUpdate(float ax, float ay, float az, float gx, float gy,
                               float gz, float mx, float my, float mz,
                               float deltat);
