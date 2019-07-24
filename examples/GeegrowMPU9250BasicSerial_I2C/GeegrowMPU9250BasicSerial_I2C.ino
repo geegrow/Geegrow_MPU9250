@@ -2,16 +2,14 @@
 #include "quaternionFilters.h"
 
 // Pin definitions
-int intPin = 12;  // These can be changed, 2 and 3 are the Arduinos ext int pins
 int myLed  = 13;  // Set up pin 13 led for toggling
-bool ledState = false;
 
 Geegrow_MPU9250 myIMU;
 /*  In I2CTransport we can use either Wire or I2C clients. In case of using I2C client,
     prevent_freezing option can be enabled. I2C_PREVENT_FREEZING is defined
     in AK8963.h file. This option is disabled by default.
     To use I2C client you should uncomment the following line. Default client is Wire. */
-#define USE_I2C_CLIENT
+// #define USE_I2C_CLIENT
 
 #ifdef USE_I2C_CLIENT
     I2C* i2c_client;
@@ -33,30 +31,30 @@ void setup() {
 
     I2CTransport::begin();
     
-    // Read the WHO_AM_I register, this is a good test of communication
-    uint8_t c = myIMU.readByte(WHO_AM_I_MPU9250);
-    Serial.print(F("MPU9250 I AM 0x"));
-    Serial.print(c, HEX);
-    Serial.print(F(" I should be 0x"));
-    Serial.println(0x71, HEX);
+    // // Read the WHO_AM_I register, this is a good test of communication
+    // uint8_t c = myIMU.readByte(WHO_AM_I_MPU9250);
+    // Serial.print(F("MPU9250 I AM 0x"));
+    // Serial.print(c, HEX);
+    // Serial.print(F(" I should be 0x"));
+    // Serial.println(0x71, HEX);
 
     if (c == 0x71) {    // WHO_AM_I should always be 0x71
         Serial.println(F("MPU9250 is online..."));
 
-        // Start by performing self test and reporting values
-        myIMU.MPU9250SelfTest(myIMU.selfTest);
-        Serial.print(F("x-axis self test: acceleration trim within : "));
-        Serial.print(myIMU.selfTest[0], 1); Serial.println("% of factory value");
-        Serial.print(F("y-axis self test: acceleration trim within : "));
-        Serial.print(myIMU.selfTest[1], 1); Serial.println("% of factory value");
-        Serial.print(F("z-axis self test: acceleration trim within : "));
-        Serial.print(myIMU.selfTest[2], 1); Serial.println("% of factory value");
-        Serial.print(F("x-axis self test: gyration trim within : "));
-        Serial.print(myIMU.selfTest[3], 1); Serial.println("% of factory value");
-        Serial.print(F("y-axis self test: gyration trim within : "));
-        Serial.print(myIMU.selfTest[4], 1); Serial.println("% of factory value");
-        Serial.print(F("z-axis self test: gyration trim within : "));
-        Serial.print(myIMU.selfTest[5], 1); Serial.println("% of factory value");
+        // // Start by performing self test and reporting values
+        // myIMU.MPU9250SelfTest(myIMU.selfTest);
+        // Serial.print(F("x-axis self test: acceleration trim within : "));
+        // Serial.print(myIMU.selfTest[0], 1); Serial.println("% of factory value");
+        // Serial.print(F("y-axis self test: acceleration trim within : "));
+        // Serial.print(myIMU.selfTest[1], 1); Serial.println("% of factory value");
+        // Serial.print(F("z-axis self test: acceleration trim within : "));
+        // Serial.print(myIMU.selfTest[2], 1); Serial.println("% of factory value");
+        // Serial.print(F("x-axis self test: gyration trim within : "));
+        // Serial.print(myIMU.selfTest[3], 1); Serial.println("% of factory value");
+        // Serial.print(F("y-axis self test: gyration trim within : "));
+        // Serial.print(myIMU.selfTest[4], 1); Serial.println("% of factory value");
+        // Serial.print(F("z-axis self test: gyration trim within : "));
+        // Serial.print(myIMU.selfTest[5], 1); Serial.println("% of factory value");
 
         myIMU.setSampleRateDivider(8);
         
@@ -118,15 +116,8 @@ void loop() {
     /* Before using filter it's necessery to update time delta */
     myIMU.updateTime();
 
-    // /* Madgwick filter */
-    // MadgwickQuaternionUpdate(
-    //     myIMU.ax, myIMU.ay, myIMU.az, 
-    //     myIMU.gx*PI/180.0f, myIMU.gy*PI/180.0f, myIMU.gz*PI/180.0f, 
-    //     myIMU.my, myIMU.mx, myIMU.mz,
-    //     myIMU.deltat
-    // );
-    /* Mahony filter */
-    MahonyQuaternionUpdate(
+    /* Madgwick filter */
+    MadgwickQuaternionUpdate(
         myIMU.ax, myIMU.ay, myIMU.az, 
         myIMU.gx*PI/180.0f, myIMU.gy*PI/180.0f, myIMU.gz*PI/180.0f, 
         myIMU.my, myIMU.mx, myIMU.mz,
