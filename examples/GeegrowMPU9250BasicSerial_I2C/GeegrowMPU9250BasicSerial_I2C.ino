@@ -31,8 +31,8 @@ void setup() {
 
     I2CTransport::begin();
     
-    // // Read the WHO_AM_I register, this is a good test of communication
-    // uint8_t c = myIMU.readByte(WHO_AM_I_MPU9250);
+    // Read the WHO_AM_I register, this is a good test of communication
+    uint8_t c = myIMU.readByte(WHO_AM_I_MPU9250);
     // Serial.print(F("MPU9250 I AM 0x"));
     // Serial.print(c, HEX);
     // Serial.print(F(" I should be 0x"));
