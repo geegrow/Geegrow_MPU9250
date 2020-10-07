@@ -309,6 +309,48 @@ void Geegrow_MPU9250::setSampleRateDivider(uint8_t srd) {
 }
 
 /*
+    Single function to init both MPU and compass with default parameters
+*/
+void Geegrow_MPU9250::init()
+{
+    // // Start by performing self test and reporting values
+    // this->MPU9250SelfTest(this->selfTest);
+    // Serial.print(F("x-axis self test: acceleration trim within : "));
+    // Serial.print(this->selfTest[0], 1); Serial.println("% of factory value");
+    // Serial.print(F("y-axis self test: acceleration trim within : "));
+    // Serial.print(this->selfTest[1], 1); Serial.println("% of factory value");
+    // Serial.print(F("z-axis self test: acceleration trim within : "));
+    // Serial.print(this->selfTest[2], 1); Serial.println("% of factory value");
+    // Serial.print(F("x-axis self test: gyration trim within : "));
+    // Serial.print(this->selfTest[3], 1); Serial.println("% of factory value");
+    // Serial.print(F("y-axis self test: gyration trim within : "));
+    // Serial.print(this->selfTest[4], 1); Serial.println("% of factory value");
+    // Serial.print(F("z-axis self test: gyration trim within : "));
+    // Serial.print(this->selfTest[5], 1); Serial.println("% of factory value");
+
+    this->setSampleRateDivider(8);
+    this->setGyroBandwidth(this->GBW_41HZ);
+    this->setGyroSampleRate(this->GFS_1000HZ);
+    this->setGyroScale(this->GFS_250DPS);
+    this->setAccelBandwidth(this->ABW_41HZ);
+    this->setAccelSampleRate(this->AFS_1000HZ);
+    this->setAccelScale(this->AFS_16G);
+    // Calibrate gyro and accelerometers, must be done before running initMPU9250();
+    this->calibrate();
+    // Initialize device for active mode read of acclerometer, gyroscope and temperature
+    this->initMPU9250();
+    /* ! compass will not work if IMU is not initialized! */
+    // this->compass.disableDebugMode();
+    // this->compass.setAdcSensitivity16Bit();
+    this->compass.setMeasurementMode8hz();
+    // The next call delays for 4 seconds, and then records about 15 seconds of
+    // data to calculate magnetometer bias and scale.
+    this->compass.init();
+    this->calibrateCompass();
+    delay(2000); // Add delay to see results before serial spew of data
+}
+
+/*
  * Setup 
  * 1. gyro, accel and termometer sample rate and low pass filter
  * 2. configure PLL
@@ -438,16 +480,16 @@ int16_t Geegrow_MPU9250::readTempData() {
 
 // Calculate the time the last update took for use in the quaternion filters
 // TODO: This doesn't really belong in this class.
-void Geegrow_MPU9250::updateTime() {
-    Now = micros();
+// void Geegrow_MPU9250::updateTime() {
+//     this->Now = micros();
 
-    // Set integration time by time elapsed since last filter update
-    deltat = ((Now - lastUpdate) / 1000000.0f);
-    lastUpdate = Now;
+//     // Set integration time by time elapsed since last filter update
+//     this->deltat = ((this->Now - this->lastUpdate) / 1000000.0f);
+//     this->lastUpdate = this->Now;
 
-    sum += deltat; // sum for averaging filter update rate
-    sumCount++;
-}
+//     this->sum += this->deltat; // sum for averaging filter update rate
+//     this->sumCount++;
+// }
 
 /**
  * Calibrate MPU9250 accelerometer and gyro.

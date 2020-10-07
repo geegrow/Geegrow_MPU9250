@@ -1,4 +1,3 @@
-
 // Implementation of Sebastian Madgwick's "...efficient orientation filter
 // for... inertial/magnetic sensor arrays"
 // (see http://www.x-io.co.uk/category/open-source/ for examples & more details)
@@ -42,7 +41,17 @@ static float eInt[3] = {0.0f, 0.0f, 0.0f};
 // Vector to hold quaternion
 static float q[4] = {1.0f, 0.0f, 0.0f, 0.0f};
 
-void MadgwickQuaternionUpdate(float ax, float ay, float az, float gx, float gy, float gz, float mx, float my, float mz, float deltat)
+
+static uint32_t count = 0, sumCount = 0; // used to control display output rate
+static float deltat = 0.0f, sum = 0.0f;  // integration interval for both filter schemes
+static uint32_t lastUpdate = 0, firstUpdate = 0; // used to calculate integration interval
+static uint32_t Now = 0;        // used to calculate integration interval
+
+float Madgwick::yaw = 0.0;
+float Madgwick::pitch = 0.0;
+float Madgwick::roll = 0.0;
+
+void Madgwick::update(float ax, float ay, float az, float gx, float gy, float gz, float mx, float my, float mz)
 {
     // short name local variable for readability
     float q1 = q[0], q2 = q[1], q3 = q[2], q4 = q[3];
@@ -50,6 +59,14 @@ void MadgwickQuaternionUpdate(float ax, float ay, float az, float gx, float gy, 
     float hx, hy, _2bx, _2bz;
     float s1, s2, s3, s4;
     float qDot1, qDot2, qDot3, qDot4;
+
+    /* Before using filter it's necessery to update time delta */
+    Now = micros();
+    // Set integration time by time elapsed since last filter update
+    deltat = ((Now - lastUpdate) / 1000000.0f);
+    lastUpdate = Now;
+    sum += deltat; // sum for averaging filter update rate
+    sumCount++;
 
     // Auxiliary variables to avoid repeated arithmetic
     float _2q1mx;
@@ -146,102 +163,109 @@ void MadgwickQuaternionUpdate(float ax, float ay, float az, float gx, float gy, 
     q[1] = q2 * norm;
     q[2] = q3 * norm;
     q[3] = q4 * norm;
+
+    /* Get pitch, roll and yaw */
+    Madgwick::yaw   = atan2(2.0f * (q[1] * q[2] + q[0] * q[3]), q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3]);   
+    Madgwick::pitch = -asin(2.0f * (q[1] * q[3] - q[0] * q[2]));
+    Madgwick::roll  = atan2(2.0f * (q[0] * q[1] + q[2] * q[3]), q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]);
+    Madgwick::pitch *= 180.0f / PI;
+    Madgwick::yaw   *= 180.0f / PI; 
+    Madgwick::yaw   -= 13.8; // Declination at Danville, California is 13 degrees 48 minutes and 47 seconds on 2014-04-04
+    Madgwick::roll  *= 180.0f / PI;
 }
 
 
 
-// Similar to Madgwick scheme but uses proportional and integral filtering on
-// the error between estimated reference vectors and measured ones.
-void MahonyQuaternionUpdate(float ax, float ay, float az, float gx, float gy, float gz, float mx, float my, float mz, float deltat)
-{
-    // short name local variable for readability
-    float q1 = q[0], q2 = q[1], q3 = q[2], q4 = q[3];
-    float norm;
-    float hx, hy, bx, bz;
-    float vx, vy, vz, wx, wy, wz;
-    float ex, ey, ez;
-    float pa, pb, pc;
+// // Similar to Madgwick scheme but uses proportional and integral filtering on
+// // the error between estimated reference vectors and measured ones.
+// void MahonyQuaternionUpdate(float ax, float ay, float az, float gx, float gy, float gz, float mx, float my, float mz)
+// {
+//     // short name local variable for readability
+//     float q1 = q[0], q2 = q[1], q3 = q[2], q4 = q[3];
+//     float norm;
+//     float hx, hy, bx, bz;
+//     float vx, vy, vz, wx, wy, wz;
+//     float ex, ey, ez;
+//     float pa, pb, pc;
 
-    // Auxiliary variables to avoid repeated arithmetic
-    float q1q1 = q1 * q1;
-    float q1q2 = q1 * q2;
-    float q1q3 = q1 * q3;
-    float q1q4 = q1 * q4;
-    float q2q2 = q2 * q2;
-    float q2q3 = q2 * q3;
-    float q2q4 = q2 * q4;
-    float q3q3 = q3 * q3;
-    float q3q4 = q3 * q4;
-    float q4q4 = q4 * q4;
+//     // Auxiliary variables to avoid repeated arithmetic
+//     float q1q1 = q1 * q1;
+//     float q1q2 = q1 * q2;
+//     float q1q3 = q1 * q3;
+//     float q1q4 = q1 * q4;
+//     float q2q2 = q2 * q2;
+//     float q2q3 = q2 * q3;
+//     float q2q4 = q2 * q4;
+//     float q3q3 = q3 * q3;
+//     float q3q4 = q3 * q4;
+//     float q4q4 = q4 * q4;
 
-    // Normalise accelerometer measurement
-    norm = sqrt(ax * ax + ay * ay + az * az);
-    if (norm == 0.0f) return; // Handle NaN
-    norm = 1.0f / norm;       // Use reciprocal for division
-    ax *= norm;
-    ay *= norm;
-    az *= norm;
+//     // Normalise accelerometer measurement
+//     norm = sqrt(ax * ax + ay * ay + az * az);
+//     if (norm == 0.0f) return; // Handle NaN
+//     norm = 1.0f / norm;       // Use reciprocal for division
+//     ax *= norm;
+//     ay *= norm;
+//     az *= norm;
 
-    // Normalise magnetometer measurement
-    norm = sqrt(mx * mx + my * my + mz * mz);
-    if (norm == 0.0f) return; // Handle NaN
-    norm = 1.0f / norm;       // Use reciprocal for division
-    mx *= norm;
-    my *= norm;
-    mz *= norm;
+//     // Normalise magnetometer measurement
+//     norm = sqrt(mx * mx + my * my + mz * mz);
+//     if (norm == 0.0f) return; // Handle NaN
+//     norm = 1.0f / norm;       // Use reciprocal for division
+//     mx *= norm;
+//     my *= norm;
+//     mz *= norm;
 
-    // Reference direction of Earth's magnetic field
-    hx = 2.0f * mx * (0.5f - q3q3 - q4q4) + 2.0f * my * (q2q3 - q1q4) + 2.0f * mz * (q2q4 + q1q3);
-    hy = 2.0f * mx * (q2q3 + q1q4) + 2.0f * my * (0.5f - q2q2 - q4q4) + 2.0f * mz * (q3q4 - q1q2);
-    bx = sqrt((hx * hx) + (hy * hy));
-    bz = 2.0f * mx * (q2q4 - q1q3) + 2.0f * my * (q3q4 + q1q2) + 2.0f * mz * (0.5f - q2q2 - q3q3);
+//     // Reference direction of Earth's magnetic field
+//     hx = 2.0f * mx * (0.5f - q3q3 - q4q4) + 2.0f * my * (q2q3 - q1q4) + 2.0f * mz * (q2q4 + q1q3);
+//     hy = 2.0f * mx * (q2q3 + q1q4) + 2.0f * my * (0.5f - q2q2 - q4q4) + 2.0f * mz * (q3q4 - q1q2);
+//     bx = sqrt((hx * hx) + (hy * hy));
+//     bz = 2.0f * mx * (q2q4 - q1q3) + 2.0f * my * (q3q4 + q1q2) + 2.0f * mz * (0.5f - q2q2 - q3q3);
 
-    // Estimated direction of gravity and magnetic field
-    vx = 2.0f * (q2q4 - q1q3);
-    vy = 2.0f * (q1q2 + q3q4);
-    vz = q1q1 - q2q2 - q3q3 + q4q4;
-    wx = 2.0f * bx * (0.5f - q3q3 - q4q4) + 2.0f * bz * (q2q4 - q1q3);
-    wy = 2.0f * bx * (q2q3 - q1q4) + 2.0f * bz * (q1q2 + q3q4);
-    wz = 2.0f * bx * (q1q3 + q2q4) + 2.0f * bz * (0.5f - q2q2 - q3q3);
+//     // Estimated direction of gravity and magnetic field
+//     vx = 2.0f * (q2q4 - q1q3);
+//     vy = 2.0f * (q1q2 + q3q4);
+//     vz = q1q1 - q2q2 - q3q3 + q4q4;
+//     wx = 2.0f * bx * (0.5f - q3q3 - q4q4) + 2.0f * bz * (q2q4 - q1q3);
+//     wy = 2.0f * bx * (q2q3 - q1q4) + 2.0f * bz * (q1q2 + q3q4);
+//     wz = 2.0f * bx * (q1q3 + q2q4) + 2.0f * bz * (0.5f - q2q2 - q3q3);
 
-    // Error is cross product between estimated direction and measured direction of gravity
-    ex = (ay * vz - az * vy) + (my * wz - mz * wy);
-    ey = (az * vx - ax * vz) + (mz * wx - mx * wz);
-    ez = (ax * vy - ay * vx) + (mx * wy - my * wx);
-    if (Ki > 0.0f)
-    {
-        eInt[0] += ex;      // accumulate integral error
-        eInt[1] += ey;
-        eInt[2] += ez;
-    }
-    else
-    {
-        eInt[0] = 0.0f;     // prevent integral wind up
-        eInt[1] = 0.0f;
-        eInt[2] = 0.0f;
-    }
+//     // Error is cross product between estimated direction and measured direction of gravity
+//     ex = (ay * vz - az * vy) + (my * wz - mz * wy);
+//     ey = (az * vx - ax * vz) + (mz * wx - mx * wz);
+//     ez = (ax * vy - ay * vx) + (mx * wy - my * wx);
+//     if (Ki > 0.0f)
+//     {
+//         eInt[0] += ex;      // accumulate integral error
+//         eInt[1] += ey;
+//         eInt[2] += ez;
+//     }
+//     else
+//     {
+//         eInt[0] = 0.0f;     // prevent integral wind up
+//         eInt[1] = 0.0f;
+//         eInt[2] = 0.0f;
+//     }
 
-    // Apply feedback terms
-    gx = gx + Kp * ex + Ki * eInt[0];
-    gy = gy + Kp * ey + Ki * eInt[1];
-    gz = gz + Kp * ez + Ki * eInt[2];
+//     // Apply feedback terms
+//     gx = gx + Kp * ex + Ki * eInt[0];
+//     gy = gy + Kp * ey + Ki * eInt[1];
+//     gz = gz + Kp * ez + Ki * eInt[2];
     
-    // Integrate rate of change of quaternion
-    pa = q2;
-    pb = q3;
-    pc = q4;
-    q1 = q1 + (-q2 * gx - q3 * gy - q4 * gz) * (0.5f * deltat);
-    q2 = pa + (q1 * gx + pb * gz - pc * gy) * (0.5f * deltat);
-    q3 = pb + (q1 * gy - pa * gz + pc * gx) * (0.5f * deltat);
-    q4 = pc + (q1 * gz + pa * gy - pb * gx) * (0.5f * deltat);
+//     // Integrate rate of change of quaternion
+//     pa = q2;
+//     pb = q3;
+//     pc = q4;
+//     q1 = q1 + (-q2 * gx - q3 * gy - q4 * gz) * (0.5f * deltat);
+//     q2 = pa + (q1 * gx + pb * gz - pc * gy) * (0.5f * deltat);
+//     q3 = pb + (q1 * gy - pa * gz + pc * gx) * (0.5f * deltat);
+//     q4 = pc + (q1 * gz + pa * gy - pb * gx) * (0.5f * deltat);
 
-    // Normalise quaternion
-    norm = sqrt(q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4);
-    norm = 1.0f / norm;
-    q[0] = q1 * norm;
-    q[1] = q2 * norm;
-    q[2] = q3 * norm;
-    q[3] = q4 * norm;
-}
-
-const float * getQ () { return q; }
+//     // Normalise quaternion
+//     norm = sqrt(q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4);
+//     norm = 1.0f / norm;
+//     q[0] = q1 * norm;
+//     q[1] = q2 * norm;
+//     q[2] = q3 * norm;
+//     q[3] = q4 * norm;
+// }

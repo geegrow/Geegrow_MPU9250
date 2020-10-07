@@ -40,49 +40,7 @@ void setup() {
 
     if (c == 0x71) {    // WHO_AM_I should always be 0x71
         Serial.println(F("MPU9250 is online..."));
-
-        // // Start by performing self test and reporting values
-        // myIMU.MPU9250SelfTest(myIMU.selfTest);
-        // Serial.print(F("x-axis self test: acceleration trim within : "));
-        // Serial.print(myIMU.selfTest[0], 1); Serial.println("% of factory value");
-        // Serial.print(F("y-axis self test: acceleration trim within : "));
-        // Serial.print(myIMU.selfTest[1], 1); Serial.println("% of factory value");
-        // Serial.print(F("z-axis self test: acceleration trim within : "));
-        // Serial.print(myIMU.selfTest[2], 1); Serial.println("% of factory value");
-        // Serial.print(F("x-axis self test: gyration trim within : "));
-        // Serial.print(myIMU.selfTest[3], 1); Serial.println("% of factory value");
-        // Serial.print(F("y-axis self test: gyration trim within : "));
-        // Serial.print(myIMU.selfTest[4], 1); Serial.println("% of factory value");
-        // Serial.print(F("z-axis self test: gyration trim within : "));
-        // Serial.print(myIMU.selfTest[5], 1); Serial.println("% of factory value");
-
-        myIMU.setSampleRateDivider(8);
-        
-        myIMU.setGyroBandwidth(myIMU.GBW_41HZ);
-        myIMU.setGyroSampleRate(myIMU.GFS_1000HZ);
-        myIMU.setGyroScale(myIMU.GFS_250DPS);
-
-        myIMU.setAccelBandwidth(myIMU.ABW_41HZ);
-        myIMU.setAccelSampleRate(myIMU.AFS_1000HZ);
-        myIMU.setAccelScale(myIMU.AFS_16G);
-
-        // Calibrate gyro and accelerometers, must be done before running initMPU9250();
-        myIMU.calibrate();
-        
-        // Initialize device for active mode read of acclerometer, gyroscope and temperature
-        myIMU.initMPU9250();
-        
-        /* ! compass will not work if IMU is not initialized! */
-        // myIMU.compass.disableDebugMode();
-        // myIMU.compass.setAdcSensitivity16Bit();
-        myIMU.compass.setMeasurementMode8hz();
-
-        // The next call delays for 4 seconds, and then records about 15 seconds of
-        // data to calculate magnetometer bias and scale.
-        myIMU.compass.init();
-        myIMU.calibrateCompass();
-
-        delay(2000); // Add delay to see results before serial spew of data
+        myIMU.init();
     }
 }
 
@@ -97,14 +55,12 @@ void loop() {
     // Serial.print(myIMU.ay);
     // Serial.print("\t");
     // Serial.println(myIMU.az);
-
     // Serial.print("gyro :   \t");
     // Serial.print(myIMU.gx);
     // Serial.print("\t");
     // Serial.print(myIMU.gy);
     // Serial.print("\t");
     // Serial.println(myIMU.gz);
-
     // Serial.print("compass :\t");
     // Serial.print(myIMU.mx);
     // Serial.print("\t");
@@ -113,36 +69,22 @@ void loop() {
     // Serial.println(myIMU.mz);
     // Serial.println();
 
-    /* Before using filter it's necessery to update time delta */
-    myIMU.updateTime();
-
     /* Madgwick filter */
-    MadgwickQuaternionUpdate(
+    Madgwick::update(
         myIMU.ax, myIMU.ay, myIMU.az, 
         myIMU.gx*PI/180.0f, myIMU.gy*PI/180.0f, myIMU.gz*PI/180.0f, 
-        myIMU.my, myIMU.mx, myIMU.mz,
-        myIMU.deltat
+        myIMU.my, myIMU.mx, myIMU.mz
     );
 
-    float* q = getQ();
-    /* Get pitch, roll and yaw */
-    float pitch, yaw, roll;
-    yaw   = atan2(2.0f * (q[1] * q[2] + q[0] * q[3]), q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3]);   
-    pitch = -asin(2.0f * (q[1] * q[3] - q[0] * q[2]));
-    roll  = atan2(2.0f * (q[0] * q[1] + q[2] * q[3]), q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]);
-    pitch *= 180.0f / PI;
-    yaw   *= 180.0f / PI; 
-    yaw   -= 13.8; // Declination at Danville, California is 13 degrees 48 minutes and 47 seconds on 2014-04-04
-    roll  *= 180.0f / PI;
     /* Print angles */
     Serial.print("yaw :\t");
-    Serial.print(yaw);
+    Serial.print(Madgwick::yaw);
     Serial.println();
     Serial.print("pitch :\t");
-    Serial.print(pitch);
+    Serial.print(Madgwick::pitch);
     Serial.println();
     Serial.print("roll :\t");
-    Serial.print(roll);
+    Serial.print(Madgwick::roll);
     Serial.println(); Serial.println();
 
 

@@ -584,10 +584,10 @@ class Geegrow_MPU9250 {
     // int16_t tempCount;   // Temperature raw count output
     // uint32_t delt_t = 0; // Used to control display output rate
 
-    uint32_t count = 0, sumCount = 0; // used to control display output rate
-    float deltat = 0.0f, sum = 0.0f;  // integration interval for both filter schemes
-    uint32_t lastUpdate = 0, firstUpdate = 0; // used to calculate integration interval
-    uint32_t Now = 0;        // used to calculate integration interval
+    // uint32_t count = 0, sumCount = 0; // used to control display output rate
+    // float deltat = 0.0f, sum = 0.0f;  // integration interval for both filter schemes
+    // uint32_t lastUpdate = 0, firstUpdate = 0; // used to calculate integration interval
+    // uint32_t Now = 0;        // used to calculate integration interval
 
     uint16_t aScaleFactor;
     float gScaleFactor, mScaleFactor;
@@ -634,8 +634,9 @@ class Geegrow_MPU9250 {
     void updateCompass();
     void update();
     int16_t readTempData();
-    void updateTime();
+    // void updateTime();
     /* Initialization */
+    void init();
     void initAK8963();
     void initMPU9250();
     /* Calibration */
